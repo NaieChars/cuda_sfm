@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/CV/cuda_SfMDemo/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

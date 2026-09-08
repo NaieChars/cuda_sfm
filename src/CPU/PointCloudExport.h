@@ -1,0 +1,13 @@
+#pragma once
+#include <vector>
+#include <string>
+#include <opencv2/opencv.hpp>
+
+struct ColoredPoint3D 
+{
+    cv::Point3f position;
+    unsigned char r, g, b;
+};
+
+// 保存3D点云为ply文件
+bool savePointCloudPLY(const std::vector<ColoredPoint3D>& points, const std::string& path);

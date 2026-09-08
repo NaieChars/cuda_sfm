@@ -1,0 +1,10 @@
+^D:\CV\CUDA_SFMDEMO\BUILD\CMAKEFILES\2DE0D8073EFF3CEF63DA56E8A5CB6F80\GENERATE.STAMP.RULE
+setlocal
+C:\Dev\cmake\bin\cmake.exe -SD:/CV/cuda_SfMDemo -BD:/CV/cuda_SfMDemo/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/CV/cuda_SfMDemo/build/cuda_sfm.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
