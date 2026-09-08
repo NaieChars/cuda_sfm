@@ -58,6 +58,7 @@ SFMResult runSFM(const CameraIntrinsics& intr)
     {
         ColoredPoint3D points;
 
+        points.position = p;
         points.r = 255;
         points.g = 255;
         points.b = 255;
@@ -75,6 +76,16 @@ SFMResult runSFM(const CameraIntrinsics& intr)
                 << p.y << ", " << p.z << ")\n";
     }
     // ----------------------------------------------------------
+
+    // =================== 保存并生成.ply文件 ========================
+    if (savePointCloudPLY(result.pointCloud, "3D_cloud.ply"))
+    {
+        std::cout << "[SavePLY] Successfully!" << std::endl;
+    }
+    else
+    {
+        std::cerr << "[SavePLY] Failed!" << std::endl;
+    }
 
     return result;
 }
