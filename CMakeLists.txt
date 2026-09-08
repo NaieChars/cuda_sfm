@@ -17,6 +17,8 @@ set(EIGEN3_INCLUDE_DIR "C:/Dev/eigen-5.0.1")
 
 find_package(OpenCV REQUIRED)
 
+
+
 set(SOURCES
     # CPU
     src/CPU/main.cpp
@@ -45,6 +47,11 @@ target_include_directories(cuda_sfm PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+)
+
+target_compile_options(cuda_sfm PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/utf-8>
 )
 
 set_target_properties(cuda_sfm PROPERTIES
