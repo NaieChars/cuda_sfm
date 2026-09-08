@@ -4,7 +4,9 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_math.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_memcpy_s.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_memory.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_search.h
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_stdio_config.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_wctype.h
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_wstdio.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_wstdlib.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_wstring.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\corecrt_wtime.h
@@ -13,6 +15,7 @@ C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\ctype.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\errno.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\math.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stdio.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stdlib.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\string.h
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\time.h

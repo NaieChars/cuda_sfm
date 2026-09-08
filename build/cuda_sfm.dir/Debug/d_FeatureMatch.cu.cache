@@ -4,8 +4,8 @@ AdditionalCompilerOptions=
 AdditionalDependencies=
 AdditionalDeps=
 AdditionalLibraryDirectories=
-AdditionalOptions= -std=c++17 --generate-code=arch=compute_120,code=[compute_120,sm_120] -Xcompiler="/EHsc -Zi -Ob0"
-AdditionalOptions= -std=c++17 --generate-code=arch=compute_120,code=[compute_120,sm_120] -Xcompiler="/EHsc -Zi -Ob0"
+AdditionalOptions= -std=c++17 --generate-code=arch=compute_120,code=[compute_120,sm_120] -Xcompiler="/EHsc -Zi -Ob0 /utf-8"
+AdditionalOptions= -std=c++17 --generate-code=arch=compute_120,code=[compute_120,sm_120] -Xcompiler="/EHsc -Zi -Ob0 /utf-8"
 CodeGeneration=
 CodeGeneration=
 CompileOut=cuda_sfm.dir\Debug\d_FeatureMatch.obj
