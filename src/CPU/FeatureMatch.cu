@@ -24,11 +24,8 @@ std::vector<cuda_MatchResult> cuda_FeatureMatch(const FeatureSet& f1, const Feat
     float* d_desc2 = nullptr;
     cuda_MatchResult* d_result = nullptr;
     const size_t bytes1 = static_cast<size_t>(f1.numFeatures) * 128 * sizeof(float);
-    
     const size_t bytes2 = static_cast<size_t>(f2.numFeatures) * 128 * sizeof(float);
-    
     const size_t resultBytes = static_cast<size_t>(f1.numFeatures) * sizeof(cuda_MatchResult);
-    
     
     CUDA_CHECK(cudaMalloc(&d_desc1, bytes1));
     CUDA_CHECK(cudaMemcpy(d_desc1, f1.descriptors.data(), bytes1, cudaMemcpyHostToDevice));
