@@ -1,3 +1,0 @@
-D:/CV/cuda_SfMDemo/build/CMakeFiles/cuda_sfm.dir
-D:/CV/cuda_SfMDemo/build/CMakeFiles/ALL_BUILD.dir
-D:/CV/cuda_SfMDemo/build/CMakeFiles/ZERO_CHECK.dir
