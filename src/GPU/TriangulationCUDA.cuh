@@ -8,4 +8,10 @@ __global__ void triangulateKernel(
     int numPoints,
     float* points3D,
     const float reprojThreshold,
-    int* Mask);
+    int* Mask,
+    int* flailSolve,
+    int* failW,
+    int* failDepth1,
+    int* failDepth2,
+    int* failReproj
+);

@@ -1,6 +1,7 @@
 #include "TriangulationCUDA.cuh"
 #include "GPU_util.cuh"
 #include <cuda_runtime.h>
+#include <stdio.h>
 
 __global__ void triangulateKernel(
     const float* points1,
@@ -10,7 +11,13 @@ __global__ void triangulateKernel(
     int numPoints,
     float* points3D,
     const float reprojThreshold,
-    int* Mask)
+    int* Mask,
+    int* flailSolve,
+    int* failW,
+    int* failDepth1,
+    int* failDepth2,
+    int* failReproj
+)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numPoints) return;
@@ -44,22 +51,26 @@ __global__ void triangulateKernel(
 
     // 求解 A X = 0 
     double X[4];
-    if (!solveAX0(A, X)) {Mask[i] = 0; return;}
+    if (!solveAX0(A, X)) {Mask[i] = 0; atomicAdd(flailSolve, 1); return;}
+    
+    
     
     // 齐次坐标归一化，得到3维点坐标
     double w = X[3];
-    if (fabs(w) < 1e-12) {Mask[i] = 0; return;}
-
+    if (fabs(w) < 1e-12) {Mask[i] = 0; atomicAdd(failW, 1); return;}
+    
     double x = X[0] / w;
     double y = X[1] / w;
     double z = X[2] / w;
+    
+    
 
     // 后续用归一化坐标求解
     // 两相机深度检测
-    if (z <= 0.0) {Mask[i] = 0; return;}
+    if (z <= 0.0) {Mask[i] = 0; atomicAdd(failDepth1, 1); return;}
 
     double z2 = P2[8] * x + P2[9] * y + P2[10] * z + P2[11];
-    if (z2 <= 0.0) {Mask[i] = 0; return;}
+    if (z2 <= 0.0) {Mask[i] = 0; atomicAdd(failDepth2, 1); return;}
 
     // 计算重投影误差
     double P1_2_dot_X = P1[8] * x + P1[9] * y + P1[10] * z + P1[11];
@@ -82,5 +93,5 @@ __global__ void triangulateKernel(
 
         Mask[i] = 1;
     }
-    else {Mask[i] = 0; return;}
+    else {Mask[i] = 0;atomicAdd(failReproj, 1); return;}
 }
