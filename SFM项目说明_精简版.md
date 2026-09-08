@@ -2,7 +2,7 @@
 
 ## 1. 项目概述
 
-本项目实现一个**双视图 SfM（Structure from Motion）重建流程**，输入两幅具有重叠视野的图像及相机内参，经过特征提取、特征匹配、几何约束、相机姿态恢复和三角化，最终生成稀疏三维点云。
+本项目实现一个**增量式 SfM（Structure from Motion）重建流程**，目前处于双视图状态，输入两幅具有重叠视野的图像及相机内参，经过特征提取、特征匹配、几何约束、相机姿态恢复和三角化，最终生成稀疏三维点云。
 
 项目采用 **CPU + CUDA GPU** 混合方式：
 
@@ -59,6 +59,7 @@
 | 工具函数 | `util.cpp/.h` | 根据掩码筛选点等 | CPU |
 | CUDA 工具函数 | `util.cu/.cuh` | 提供 GPU 端数学计算函数 | CUDA |
 | CUDA 数据结构 | `d_FeatureSet.cuh` | 定义 GPU 特征和匹配结果结构 | CUDA |
+| CPU 数据结构 | `FeatureSet.h` `SFMTypes.h` | 定义SIFT出来的CPU特征并拍平传给GPU, 打包SFM的输出 | CPU |
 
 ---
 
@@ -96,6 +97,19 @@ extractFeaturesFromImages()
 
 ---
 
+
+## 数据流动说明
+
+- opencv读取图像信息，送入 SIFT 进行特征点提取。提取后的数据打包成结构 `std::vector<FeatuereSet>`，每个 `FeatureSet` 对应一个图像信息
+- 两个 `FeatureSet` 进入特征点匹配阶段，输出第一张图的 `cuda_MatchResult`，再基于该匹配结果筛选出已成功匹配的两点，并将他们坐标一一对应保存进 `std::vector<cv::Points2f> points`
+- 将 `points1`、`points2` 输入进本质矩阵估计函数，输出本质矩阵E与 `essentialMask`（**该掩码表示这对匹配点是否符合本质矩阵的几何约束**）
+- 将 `points1`、`points2` 输入位姿恢复函数，内部先用 `essentialMask` 进行一次筛选，再将筛选后的点进行位姿恢复。位姿恢复输出有效内点数量，`poseMask`，R，t
+- 在 SFM 主流程中进行两次点筛选，将其传入三角化函数，输出最终内点集与 3DMask
+
+---
+
+
+
 ## 5. 特征提取
 
 **文件：** `FeatureExtractor.cpp/.h`
@@ -106,14 +120,23 @@ extractFeaturesFromImages()
 std::vector<FeatureSet> extractFeaturesFromImages();
 ```
 
+### 内部核心函数
+
+```cpp
+static cv::Mat robustImreadIndexed(int index)        // 多路径尝试读图
+FeatureSet extractSIFTFeatures(const cv::Mat& image) // 传入图像，进行 SIFT
+```
+
 函数从固定命名规则的图像文件中读取图像，并对每张图像执行 SIFT 特征提取。
 
 每张图像对应一个 `FeatureSet`，主要包含：
 
 - 特征点数量 `numFeatures`
-- 特征点坐标 `kpX / kpY`
-- SIFT 描述子 `descriptors`
-- OpenCV 特征点 `cvKeypoints`
+- 特征点坐标 `std::vector<float> kpX / std::vector<float> kpY`
+- SIFT 描述子 `std::vector<float> descriptors`
+- OpenCV 特征点 `std::vector<cv::KeyPoint> cvKeypoints`
+
+其中 `descriptors` 和 `cvKeypoints` 均来自于 SIFT
 
 SIFT 描述子维度为 128。
 
@@ -123,46 +146,45 @@ SIFT 描述子维度为 128。
 
 ## 6. CUDA 特征匹配
 
-**文件：** `FeatureMatch.cu/.cuh`
+### Host 端
+**文件：** `CPU/FeatureMatch.cu/.cuh`
 
-### 核心接口
+####  Host 端核心接口
 
 ```cpp
 std::vector<cuda_MatchResult>
 cuda_FeatureMatch(const FeatureSet& f1, const FeatureSet& f2);
 ```
 
-其核心 CUDA 核函数为：
+将 Host 端的两个**描述子**拍平为数组，送入 Device 端进行特征点暴力匹配。Device 端输出给 Hoxst 端类型为 `std::vector<cuda_MatchResult>` 的数据结构。
+
+```cpp
+void convertMatches(const FeatureSet& f1, const FeatureSet& f2, 
+                    const std::vector<cuda_MatchResult>& cuda_result,
+                    std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2)
+```
+
+匹配结果转换：  
+该函数将匹配结果 `cuda_MatchResult` 转换为两幅图像中对应的 `cv::Point2f` 像素坐标，分别保存到 `points1` 和 `points2`。（`points1[i]` 与 `points2[i]` 表示同一个匹配关系）。
+
+此处**经历了一次筛选**，如果第一张图中的某特征点没有在第二张图里找到最佳匹配点，该点直接舍弃。
+
+
+#### 核心 CUDA 核函数
+**文件：`GPU/d_FeatureMatch.cu/cuh`**
 
 ```cpp
 __global__ void matchBruteForce(...);
 ```
 
-### 基本过程
+**基本过程**
 
-```text
-左图 SIFT 描述子
-        │
-        ├── 与右图所有描述子计算距离
-        │
-        ├── 找到最近邻和次近邻
-        │
-        └── 进行比值测试
-                ↓
-            有效匹配
-```
+暴力匹配：   
+左图 SIFT 描述子，与右图所有描述子计算距离，找到最近邻和次近邻，进行比值测试，最终输出有效匹配。            
 
-每个 CUDA 线程负责一个左图特征点，遍历右图特征描述子，计算平方 L2 距离并进行比值测试。
+每个 CUDA 线程负责一个左图特征点，**遍历**右图特征描述子，计算平方 L2 距离并进行比值测试。
 
 当前代码中的比值测试阈值为 `0.75f`。
-
-### 匹配结果转换
-
-```cpp
-void convertMatches(...);
-```
-
-该函数将匹配结果转换为两幅图像中对应的 `cv::Point2f` 像素坐标，分别保存到 `points1` 和 `points2`。
 
 ---
 
@@ -181,7 +203,7 @@ cv::Mat estimateEssentialMatrix(
 );
 ```
 
-该模块使用 OpenCV 的 `cv::findEssentialMat()`，结合相机内参和 RANSAC，从匹配点中估计本质矩阵 `E`，并输出 `essentialMask`。
+该模块内部使用 OpenCV 的 `cv::findEssentialMat()`，结合相机内参和 RANSAC，从匹配点中估计本质矩阵 `E`，并输出 `essentialMask`。
 
 `essentialMask` 用于区分满足当前几何约束的匹配点。
 
@@ -212,7 +234,7 @@ bool recoverCameraPose(
 );
 ```
 
-内部首先根据 `essentialMask` 筛选匹配点，然后调用：
+内部**首先根据 `essentialMask` 筛选匹配点**，然后调用 OpenCV 提供的函数：
 
 ```cpp
 cv::recoverPose(...);
@@ -222,8 +244,8 @@ cv::recoverPose(...);
 
 - `R`：旋转矩阵
 - `t`：平移方向
-- `poseMask`：姿态恢复阶段使用的掩码
-- `inlierCount`：有效内点数量
+- **`poseMask`：姿态恢复阶段使用的掩码**
+- `inlierCount`：经 `essentialMask` 与位姿恢复筛选后的有效内点数量，其值等于 `poseMask` 后的点数量
 
 当前代码以 `inlierCount > 15` 作为姿态是否有效的判断条件。
 
@@ -244,9 +266,7 @@ std::vector<cv::Point2f> fliterInlierPoints(
 
 作用很简单：根据掩码保留对应位置的点。
 
-在主流程中，匹配点会经历基于几何约束的筛选，随后将有效点用于三角化。
-
-> 注意：原始说明中对 `poseMask` 与经过 `essentialMask` 筛选后的点集之间的索引对应关系存在描述不一致，因此这里不对具体索引实现做额外推断。实际行为应以当前源码为准。
+在主流程中，用于三角化的点会经过 `PoseMask`、`essentialMask` 两次筛选
 
 ---
 
@@ -274,7 +294,7 @@ P1 = K [I | 0]
 P2 = K [R | t]
 ```
 
-然后将点坐标和投影矩阵传入 GPU。
+传入两次筛选后的内点，相机的R、t、`CameraIntrinsics`，内部构造两个函数的投影矩阵，将其拍平，连同内点传入进 Device 端进行三角化，Device 端输出 `d_Mask`（即判断该3D点是否有效）到 Host 端。输出 `Mask_3D` 与经过该掩码筛选出的最终内点集
 
 ### CUDA 核函数
 
@@ -290,7 +310,7 @@ __global__ void triangulateKernel(...);
 4. 计算重投影误差；
 5. 根据阈值判断该 3D 点是否有效。
 
-当前实现使用的重投影误差阈值为 `1.5`。
+当前实现使用的重投影误差阈值为 `1.5`
 
 最后将 GPU 中得到的有效点回传到 CPU，形成 `std::vector<cv::Point3f>`。
 
