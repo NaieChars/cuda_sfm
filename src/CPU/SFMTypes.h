@@ -5,8 +5,8 @@
 
 struct CameraPose 
 {
-    cv::Mat R = cv::Mat::eye(3, 3, CV_32F);
-    cv::Mat t = cv::Mat::zeros(3, 1, CV_32F);
+    cv::Mat R = cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat t = cv::Mat::zeros(3, 1, CV_64F);
 };
 
 struct SFMResult 
