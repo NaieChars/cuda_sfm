@@ -25,6 +25,14 @@ SFMResult runSFM(const CameraIntrinsics& intr)
     std::vector<uchar> essentialMask;
     cv::Mat E = estimateEssentialMatrix(points1, points2, intr, essentialMask);
 
+    std::cout << "OpenCV E:\n" << E << std::endl;
+    int opencvInliers = cv::countNonZero(essentialMask);
+    std::cout << "[E_OpenCV] Inliers: " << opencvInliers << " / " << points1.size() << std::endl;
+    // ------- Opencv 与 cuda版本对比 --------
+
+    E = estimateEssentialMatrixRANSAC(points1, points2, intr.fx, intr.fy, intr.cx, intr.cy, 0.999, 1000, essentialMask);
+    std::cout << "CUDA RANSAC E:\n" << E << std::endl;
+
     // ================= Pose Recovery =================
     cv::Mat R, t;
     int inlierCount = 0;
@@ -65,17 +73,6 @@ SFMResult runSFM(const CameraIntrinsics& intr)
 
         result.pointCloud.push_back(points);
     }
-
-    // --------- 调试代码：检查 Points3D 是否写对 ------------
-    std::cout << "Points3D size = " << Points3D.size() << '\n';
-
-    for (int i = 0; i < std::min(10, (int)Points3D.size()); ++i)
-    {
-        const auto& p = Points3D[i];
-        std::cout << i << ": (" << p.x << ", "
-                << p.y << ", " << p.z << ")\n";
-    }
-    // ----------------------------------------------------------
 
     // =================== 保存并生成.ply文件 ========================
     if (savePointCloudPLY(result.pointCloud, "3D_cloud.ply"))

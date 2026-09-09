@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include "CameraIntrinsics.h"
-#include "EssentialMatrix.h"
+#include "EssentialMatrix.cuh"
 #include "FeatureExtractor.h"
 #include "FeatureMatch.cuh"
 #include "PoseRecovery.h"

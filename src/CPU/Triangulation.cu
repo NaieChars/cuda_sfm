@@ -1,23 +1,10 @@
 #include "Triangulation.cuh"
 #include "cuda_Check.cuh"
 #include "../GPU/TriangulationCUDA.cuh"
+#include "util.h"
 #include <cuda_runtime.h>
 
 //第二次掩码筛选复用 PoseRecovery.h 里的 fliter 函数
-
-// flatten Matrix(3 x 4)
-std::array<double, 12> flattenMatrix(const cv::Mat& P)
-{
-    std::array<double, 12> flat;
-
-    for (int r = 0; r < 3; r++)
-    {
-        for (int c = 0; c < 4; c++)
-            flat[r * 4 + c] = P.at<double>(r, c);
-    }
-    return flat;
-}
-
 
 // cuda_triangulation 核心流程
 // InlierPoints1是已经二次筛选的
@@ -68,9 +55,9 @@ std::vector<cv::Point3f> cudaTriangulation(
 
     // P1, P2 -> flatten
     std::array<double, 12> P1_flat;
-    P1_flat = flattenMatrix(P1);
+    P1_flat = flattenMatrix_3x4(P1);
     std::array<double, 12> P2_flat;
-    P2_flat = flattenMatrix(P2);
+    P2_flat = flattenMatrix_3x4(P2);
 
     // CPU -> GPU
     double* d_P1 = nullptr;

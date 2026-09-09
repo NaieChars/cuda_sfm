@@ -23,7 +23,6 @@ set(SOURCES
     # CPU
     src/CPU/main.cpp
     src/CPU/CameraIntrinsics.cpp
-    src/CPU/EssentialMatrix.cpp
     src/CPU/FeatureExtractor.cpp
     src/CPU/PointCloudExport.cpp
     src/CPU/PoseRecovery.cpp
@@ -33,6 +32,7 @@ set(SOURCES
     # Host 侧 CUDA 封装
     src/CPU/FeatureMatch.cu
     src/CPU/Triangulation.cu
+    src/CPU/EssentialMatrix.cu
 
     # GPU kernel / device code
     src/GPU/d_FeatureMatch.cu

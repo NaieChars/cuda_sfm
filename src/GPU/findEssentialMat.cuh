@@ -1,3 +1,6 @@
 #pragma once
 
-//__global__ void validateEssentialMatrixCUDA(double* E, float* points1, float* points2, int* inlierMask, int inlierCount);
+__global__ void validateEssentialMatrixCUDA(const double* E, 
+     const float* points1, const float* points2, 
+     unsigned char* inlierMask, int* inlierCount, int numPoints,
+    const float threshold);

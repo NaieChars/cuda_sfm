@@ -115,10 +115,10 @@ __device__ bool solveAX0(const double A[4][4], double X[4])
     return true;
 }
 
-// 将像素坐标转换成归一化相机坐标，方便 GPU 内的 E 验证
-// 返回 float2 ，保存处理后的坐标
-__device__ float2 normalizePoints(float u, float v,
-    float fx, float fy, float cx, float cy)
+
+// 修改：将kernel里的归一化放在了CPU端，此函数退化为单纯返回float2
+// 将传入的点坐标数组变为float2形式
+__device__ float2 arrayToFloat2(float u, float v)
 {
-    return make_float2((u - cx) / fx, (v - cy) / fy);
+    return make_float2(u, v);
 }
