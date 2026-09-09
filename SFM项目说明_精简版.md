@@ -7,7 +7,7 @@
 项目采用 **CPU + CUDA GPU** 混合方式：
 
 - CPU / OpenCV：负责 SIFT 特征提取、本质矩阵估计、相机姿态恢复以及流程组织。
-- CUDA：负责特征描述子暴力匹配和三角化等计算密集任务。
+- CUDA：负责特征描述子暴力匹配、三角化、RANSAC验证。
 
 ---
 
@@ -26,7 +26,7 @@
      匹配点坐标
         │
         ▼
- Essential Matrix + RANSAC
+ Essential Matrix + CUDA RANSAC
         │
         ▼
       恢复 R、t
@@ -51,13 +51,13 @@
 |---|---|---|---|
 | SFM 主流程 | `SFM.cpp/.h` | 串联整个双视图 SfM 流程 | CPU |
 | 特征提取 | `FeatureExtractor.cpp/.h` | 读取图像并提取 SIFT 特征 | CPU |
-| 特征匹配 | `FeatureMatch.cu/.cuh` | 对 SIFT 描述子进行暴力匹配 | CUDA |
-| 本质矩阵 | `EssentialMatrix.cpp/.h` | 使用 RANSAC 估计本质矩阵并得到内点掩码 | CPU / OpenCV |
+| 特征匹配 | `d_FeatureMatch.cu/.cuh` | 对 SIFT 描述子进行暴力匹配 | CUDA |
+| 本质矩阵 | `EssentialMatrix.cu/.cuh` `findEssentialMat.cu/cuh` | CPU端获得试验E，传入GPU进行RANSAC验证，最终输出E与掩码 | CPU / GPU / OpenCV |
 | 姿态恢复 | `PoseRecovery.cpp/.h` | 根据本质矩阵恢复旋转 `R` 和平移 `t` | CPU / OpenCV |
 | 三角化 | `Triangulation.cu/.cuh` | 根据两视图几何关系恢复 3D 点 | CUDA |
 | 相机内参 | `CameraIntrinsics.cpp/.h` | 保存相机内参并构造 `K`、`Kinv` | CPU |
-| 工具函数 | `util.cpp/.h` | 根据掩码筛选点等 | CPU |
-| CUDA 工具函数 | `util.cu/.cuh` | 提供 GPU 端数学计算函数 | CUDA |
+| 工具函数 | `util.cpp/.h` | 根据掩码筛选点，匹配点坐标归一化，拍平矩阵 | CPU |
+| CUDA 工具函数 | `GPU_util.cu/.cuh` | 提供 GPU 端数学计算函数 | CUDA |
 | CUDA 数据结构 | `d_FeatureSet.cuh` | 定义 GPU 特征和匹配结果结构 | CUDA |
 | CPU 数据结构 | `FeatureSet.h` `SFMTypes.h` | 定义SIFT出来的CPU特征并拍平传给GPU, 打包SFM的输出 | CPU |
 
@@ -188,9 +188,9 @@ __global__ void matchBruteForce(...);
 
 ---
 
-## 7. 本质矩阵估计
+## 7.1 本质矩阵估计_OpenCV
 
-**文件：** `EssentialMatrix.cpp/.h`
+**文件：** `EssentialMatrix.cu/.cuh`
 
 ### 核心接口
 
@@ -213,6 +213,34 @@ cv::Mat estimateEssentialMatrix(
 - 阈值：`1.5`
 
 ---
+
+## 7.2 本质矩阵估计_CUDA
+
+**文件：**`findEssentialMat.cu/cuh` `EssentialMatrix.cu/cuh`
+
+### 核心接口
+
+```cpp
+// CUDA 版本求E的对外上层接口，对输出结果暂时不包装成 RansacResult
+cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
+                        const std::vector<cv::Point2f>& points2,
+                        double fx, double fy, double cx, double cy, 
+                        const float confidence,
+                        const int maxIterations,
+                        std::vector<uchar>& essentialMask);
+```
+
+该模块采用 CPU + CUDA 协同的 RANSAC 方案估计本质矩阵 E。
+
+- 在函数内部，首先对点坐标归一化到相机坐标系。随后在CPU端进行 RANSAC 采样，每次8点，生成本质矩阵。
+- 候选E传入GPU，进行对全部匹配点并行计算 Sampson distance，判断匹配点是否为内点，统计当前E的内点数量
+- RANSAC 根据内点数选择最佳E，并根据当前最佳内点比例动态调整迭代次数
+- RANSAC结束后，使用最佳内点重新拟合E，并再次通过CUDA验证得到essentialMask
+
+当前实现中的主要 RANSAC 参数由接口传入，包括：
+- 置信度：0.999
+- 最大迭代次数：1000
+- Sampson distance 阈值：当前实现为 1e-6
 
 ## 8. 相机姿态恢复
 
