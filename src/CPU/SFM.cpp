@@ -1,4 +1,5 @@
 #include "SFM.h"
+#include "Config.h"
 
 // 两张图的SFM主流程
 SFMResult runSFM(const CameraIntrinsics& intr)
@@ -23,15 +24,16 @@ SFMResult runSFM(const CameraIntrinsics& intr)
 
     // ================ Essential Matrix ================
     std::vector<uchar> essentialMask;
+
+    #if USE_CUDA_RANSAC
+    cv::Mat E = estimateEssentialMatrixRANSAC(points1, points2, intr.fx, intr.fy, intr.cx, intr.cy, 0.999, 1000, essentialMask);
+    std::cout << "[CUDA RANSAC] E:\n" << E << std::endl;
+    #else
     cv::Mat E = estimateEssentialMatrix(points1, points2, intr, essentialMask);
+    std::cout << "[OpenCV] E:\n" << E << std::endl;
+    #endif
 
-    std::cout << "OpenCV E:\n" << E << std::endl;
-    int opencvInliers = cv::countNonZero(essentialMask);
-    std::cout << "[E_OpenCV] Inliers: " << opencvInliers << " / " << points1.size() << std::endl;
-    // ------- Opencv 与 cuda版本对比 --------
-
-    E = estimateEssentialMatrixRANSAC(points1, points2, intr.fx, intr.fy, intr.cx, intr.cy, 0.999, 1000, essentialMask);
-    std::cout << "CUDA RANSAC E:\n" << E << std::endl;
+    std::cout << "Inliers: " << cv::countNonZero(essentialMask) << " / " << points1.size() << std::endl;
 
     // ================= Pose Recovery =================
     cv::Mat R, t;
