@@ -62,16 +62,14 @@ SFMResult runSFM(const CameraIntrinsics& intr)
 
     std::vector<cv::Point3f> Points3D = cudaTriangulation(poseInlierPoints1, poseInlierPoints2, intr, R, t, Mask3D);
 
-    for (auto p : Points3D)
+    int pointIndex = 0;
+    for (int i = 0; i < Mask3D.size(); i++)
     {
-        ColoredPoint3D points;
+        if (Mask3D[i] == 0) continue;
 
-        points.position = p;
-        points.r = 255;
-        points.g = 255;
-        points.b = 255;
-
-        result.pointCloud.push_back(points);
+        ColoredPoint3D color3D = getColorPoint3D(pointIndex, i, features[0], poseInlierPoints1, Points3D);
+        result.pointCloud.push_back(color3D);
+        pointIndex++;
     }
 
     // =================== 保存并生成.ply文件 ========================

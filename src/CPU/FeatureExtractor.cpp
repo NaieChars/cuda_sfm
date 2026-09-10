@@ -93,7 +93,9 @@ std::vector<FeatureSet> extractFeaturesFromImages()
 
 	for (int i = 0; i < n; i++)
 	{
-		results.push_back(extractSIFTFeatures(images[i]));
+		FeatureSet feature = extractSIFTFeatures(images[i]);
+		feature.image = images[i];	// 将图片保存下来
+		results.push_back(feature);	
 	}
 
 	return results;

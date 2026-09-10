@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <opencv2/opencv.hpp>
+#include "FeatureSet.h"
 
 struct ColoredPoint3D 
 {
@@ -11,3 +12,8 @@ struct ColoredPoint3D
 
 // 保存3D点云为ply文件
 bool savePointCloudPLY(const std::vector<ColoredPoint3D>& points, const std::string& path);
+
+// 提取点云颜色
+ColoredPoint3D getColorPoint3D(int pointIndex, int imagePointIndex, FeatureSet& f1,
+    std::vector<cv::Point2f>& poseInlierPoints1, std::vector<cv::Point3f>& Points3D
+    );
