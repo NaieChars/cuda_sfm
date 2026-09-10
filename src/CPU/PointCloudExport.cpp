@@ -34,7 +34,7 @@ bool savePointCloudPLY(const std::vector<ColoredPoint3D>& points, const std::str
 }
 
 
-ColoredPoint3D getColorPoint3D(int pointIndex, int imagePointIndex, FeatureSet& f1,
+ColoredPoint3D getColorPoint3D(int pointIndex, int imagePointIndex, cv::Mat& image,
     std::vector<cv::Point2f>& poseInlierPoints1, std::vector<cv::Point3f>& Points3D
     )
 {
@@ -44,7 +44,7 @@ ColoredPoint3D getColorPoint3D(int pointIndex, int imagePointIndex, FeatureSet& 
         int x = cvRound(poseInlierPoints1[imagePointIndex].x);
         int y = cvRound(poseInlierPoints1[imagePointIndex].y);
 
-        cv::Vec3b color = f1.image.at<cv::Vec3b>(y, x);
+        cv::Vec3b color = image.at<cv::Vec3b>(y, x);
 
         point.b = color[0];
         point.g = color[1];
