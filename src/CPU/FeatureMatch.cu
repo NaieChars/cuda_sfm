@@ -2,7 +2,7 @@
 #include "../GPU/d_FeatureSet.cuh"
 #include "../GPU/d_FeatureMatch.cuh"
 #include "cuda_Check.cuh"
-#include "FeatureSet.h"
+#include "DataStruct.h"
 #include "FeatureMatch.cuh"
 
 // 小函数，统计有效匹配点

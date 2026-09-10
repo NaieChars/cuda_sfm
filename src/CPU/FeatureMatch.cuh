@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "../GPU/d_FeatureSet.cuh"
-#include "FeatureSet.h"
+#include "DataStruct.h"
 
 std::vector<cuda_MatchResult> cuda_FeatureMatch(const FeatureSet& f1, const FeatureSet& f2);
 

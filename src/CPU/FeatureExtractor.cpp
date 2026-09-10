@@ -69,10 +69,9 @@ static cv::Mat robustImreadIndexed(int index)
     return cv::Mat();
 }
 
-std::vector<FeatureSet> extractFeaturesFromImages()
+std::vector<FeatureSet> extractFeaturesFromImages(std::vector<cv::Mat>& images)
 {
     std::vector<FeatureSet> results;
-	std::vector<cv::Mat> images;
 
 	int idx = 1;
 	while (true)
@@ -94,7 +93,6 @@ std::vector<FeatureSet> extractFeaturesFromImages()
 	for (int i = 0; i < n; i++)
 	{
 		FeatureSet feature = extractSIFTFeatures(images[i]);
-		feature.image = images[i];	// 将图片保存下来
 		results.push_back(feature);	
 	}
 
