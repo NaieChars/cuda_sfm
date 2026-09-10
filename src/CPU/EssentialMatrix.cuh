@@ -1,5 +1,7 @@
 #pragma once
 #include <opencv2/opencv.hpp>
+#include <random>
+
 #include "CameraIntrinsics.h"
 
 // ------------------ 外部接口 --------------------
@@ -39,4 +41,5 @@ cv::Mat refineEssentialMatrix(
 void sample8Points(const std::vector<cv::Point2f>& points1, 
                    const std::vector<cv::Point2f>& points2,
                    std::vector<cv::Point2f>& sample1,
-                   std::vector<cv::Point2f>& sample2);
+                   std::vector<cv::Point2f>& sample2,
+                   std::mt19937& gen);

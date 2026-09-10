@@ -4,7 +4,6 @@
 #include "../GPU/findEssentialMat.cuh"
 
 #include <cuda_runtime.h>
-#include <random>
 #include <set>
 #include <cmath>
 
@@ -68,6 +67,8 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
     int bestInlierCount = 0;
     int actualIterations = maxIterations; // actualIterations 计划跑多少轮
     cv::Mat bestE;
+    std::random_device rd;
+    std::mt19937 gen(rd());
 
     for (int iter = 0; iter < maxIterations; iter++)
     {
@@ -75,7 +76,7 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
         std::vector<cv::Point2f> sample1, sample2;
         sample1.reserve(sampleSize);
         sample2.reserve(sampleSize);
-        sample8Points(normPoints1, normPoints2, sample1, sample2);
+        sample8Points(normPoints1, normPoints2, sample1, sample2, gen);
 
         // 8点法求候选E
         cv::Mat candidateE = generateCandidateE(sample1, sample2);
@@ -275,11 +276,9 @@ cv::Mat refineEssentialMatrix(
 void sample8Points(const std::vector<cv::Point2f>& points1, 
                    const std::vector<cv::Point2f>& points2,
                    std::vector<cv::Point2f>& sample1,
-                   std::vector<cv::Point2f>& sample2)
+                   std::vector<cv::Point2f>& sample2,
+                   std::mt19937& gen)
 {
-    std::random_device rd;  // 随机种子
-    std::mt19937 gen(rd());
-
     // 随机索引范围 [0, n1 - 1]
     std::uniform_int_distribution<int> dist(0, static_cast<int>(points1.size()) - 1);
 
