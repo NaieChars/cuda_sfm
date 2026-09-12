@@ -28,6 +28,7 @@ set(SOURCES
     src/CPU/PoseRecovery.cpp
     src/CPU/SFM.cpp
     src/CPU/util.cpp
+    src/CPU/PnP.cpp
 
     # Host 侧 CUDA 封装
     src/CPU/FeatureMatch.cu
@@ -39,6 +40,12 @@ set(SOURCES
     src/GPU/findEssentialMat.cu
     src/GPU/TriangulationCUDA.cu
     src/GPU/GPU_util.cu
+
+    # CudaSift
+    third_party/CudaSift-AdaLovelace/cudaImage.cu
+    third_party/CudaSift-AdaLovelace/cudaSiftH.cu
+    third_party/CudaSift-AdaLovelace/matching.cu
+    third_party/CudaSift-AdaLovelace/geomFuncs.cpp
 )
 
 add_executable(cuda_sfm ${SOURCES})
@@ -47,6 +54,8 @@ target_include_directories(cuda_sfm PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+
+    ${CMAKE_SOURCE_DIR}/third_party/CudaSift-AdaLovelace
 )
 
 target_compile_options(cuda_sfm PRIVATE
