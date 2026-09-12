@@ -99,13 +99,13 @@ void convertNewMatches(
     for (const auto& match : newMatches)
     {
         pointsPrev.emplace_back(
-            featuresPrev.kpX[match.kpPrev],
-            featuresPrev.kpY[match.kpPrev]
+            featuresPrev.kpX[match.PrevImagePointIdx],
+            featuresPrev.kpY[match.PrevImagePointIdx]
         );
 
         pointsCur.emplace_back(
-            featuresCur.kpX[match.kpCur],
-            featuresCur.kpY[match.kpCur]
+            featuresCur.kpX[match.CurImagePointIdx],
+            featuresCur.kpY[match.CurImagePointIdx]
         );
     }
 }

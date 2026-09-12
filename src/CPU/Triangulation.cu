@@ -6,8 +6,7 @@
 
 //第二次掩码筛选复用 PoseRecovery.h 里的 fliter 函数
 
-// cuda_triangulation 核心流程
-// InlierPoints1是已经二次筛选的
+
 std::vector<cv::Point3f> cudaTriangulation(
     const std::vector<cv::Point2f>& inlierPoints1,
     const std::vector<cv::Point2f>& inlierPoints2,
@@ -33,32 +32,35 @@ std::vector<cv::Point3f> cudaTriangulation(
 
     P2 = intr.K * P2;
 
-    // ------------ 调试输出 ------------
-    std::cout << "P1:\n" << P1 << "\n";
-    std::cout << "P2:\n" << P2 << "\n";
+    // ------------ 调试输出: 检查P1,P2 ------------
+    #if DEBUG_OUTPUT
+        std::cout << "P1:\n" << P1 << "\n";
+        std::cout << "P2:\n" << P2 << "\n";
+    #endif
 
     // ---------------调试：CPU 端 Opencv 三角化对照 ----------------
-    /*
-    cv::Mat points4D;
-    cv::triangulatePoints(P1, P2, inlierPoints1, inlierPoints2, points4D);
-    points4D.convertTo(points4D, CV_64F);
-    for (int i = 0; i < std::min(10, points4D.cols); ++i)
-    {
-        double w = points4D.at<double>(3, i);
-        double x = points4D.at<double>(0, i) / w;
-        double y = points4D.at<double>(1, i) / w;
-        double z = points4D.at<double>(2, i) / w;
+    
+    #if DEBUG_OUTPUT
+        cv::Mat points4D;
+        cv::triangulatePoints(P1, P2, inlierPoints1, inlierPoints2, points4D);
+        points4D.convertTo(points4D, CV_64F);
+        for (int i = 0; i < std::min(10, points4D.cols); ++i)
+        {
+            double w = points4D.at<double>(3, i);
+            double x = points4D.at<double>(0, i) / w;
+            double y = points4D.at<double>(1, i) / w;
+            double z = points4D.at<double>(2, i) / w;
 
-        double z2 = P2.at<double>(2, 0) * x +
-                P2.at<double>(2, 1) * y +
-                P2.at<double>(2, 2) * z +
-                P2.at<double>(2, 3);
+            double z2 = P2.at<double>(2, 0) * x +
+                    P2.at<double>(2, 1) * y +
+                    P2.at<double>(2, 2) * z +
+                    P2.at<double>(2, 3);
 
-        std::cout << "i=" << i
-                << " xyz=(" << x << "," << y << "," << z << ")"
-                << " z1=" << z << " z2=" << z2 << '\n';
-    }
-    */
+            std::cout << "i=" << i
+                    << " xyz=(" << x << "," << y << "," << z << ")"
+                    << " z1=" << z << " z2=" << z2 << '\n';
+        }
+    #endif
     // ------------------------------------------------------------------------
 
 
@@ -140,11 +142,13 @@ std::vector<cv::Point3f> cudaTriangulation(
     CUDA_CHECK(cudaMemcpy(&h_failDepth2, d_failDepth2, sizeof(int), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&h_failReproj, d_failReproj, sizeof(int), cudaMemcpyDeviceToHost));
 
-    std::cout << "failSolve  = " << h_failSolve << std::endl;
-    std::cout << "failW      = " << h_failW << std::endl;
-    std::cout << "failDepth1 = " << h_failDepth1 << std::endl;
-    std::cout << "failDepth2 = " << h_failDepth2 << std::endl;
-    std::cout << "failReproj = " << h_failReproj << std::endl;
+    #if DEBUG_OUTPUT
+        std::cout << "failSolve  = " << h_failSolve << std::endl;
+        std::cout << "failW      = " << h_failW << std::endl;
+        std::cout << "failDepth1 = " << h_failDepth1 << std::endl;
+        std::cout << "failDepth2 = " << h_failDepth2 << std::endl;
+        std::cout << "failReproj = " << h_failReproj << std::endl;
+    #endif
     // -----------------------------------------------------------------------------
 
     // 过滤失败点（经深度验证与重投影误差验证）

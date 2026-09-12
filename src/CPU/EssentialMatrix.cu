@@ -1,44 +1,44 @@
 #include "EssentialMatrix.cuh"
-#include "util.h"
-#include "cuda_Check.cuh"
-#include "../GPU/findEssentialMat.cuh"
 
-#include <cuda_runtime.h>
-#include <set>
-#include <cmath>
+// ----------------------- 外部接口 --------------------------
 
-// 外部接口1，opencv 本质矩阵API
-cv::Mat estimateEssentialMatrix(const std::vector<cv::Point2f>& points1, const std::vector<cv::Point2f>& points2,
-        const CameraIntrinsics& intr,std::vector<uchar>& essentialMask)
+RansacResult estimateEssentialMatrix(const std::vector<cv::Point2f>& points1, const std::vector<cv::Point2f>& points2,
+        const CameraIntrinsics& intr)
 {
-    cv::Mat E = cv::findEssentialMat(
+    RansacResult result;
+
+    result.E = cv::findEssentialMat(
         points1, points2,
         intr.K,
         cv::RANSAC,
         0.999,
         1.5,
-        essentialMask
+        result.essentialMask
     );
 
-    return E;
+    std::cout << "[EssentialMat] Inliers: " << cv::countNonZero(result.essentialMask) << " / " << points1.size() << std::endl;
+
+    return result;
 }
 
-// 外部接口2，RANSAC 在 CUDA 实现
-cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
+
+RansacResult estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
                         const std::vector<cv::Point2f>& points2,
-                        double fx, double fy, double cx, double cy, 
+                        const CameraIntrinsics& intr, 
                         const float confidence,
-                        const int maxIterations,
-                        std::vector<uchar>& essentialMask)
+                        const int maxIterations)
 {
+    RansacResult result;
+
     const int n = static_cast<int>(points1.size());
     assert(points1.size() == points2.size());
     assert(n >= 8);
-    essentialMask.resize(n);
+
+    result.essentialMask.resize(n);
 
     // 点归一化
-    std::vector<cv::Point2f> normPoints1 = normalizePoints(points1, fx, fy, cx, cy);
-    std::vector<cv::Point2f> normPoints2 = normalizePoints(points2, fx, fy, cx, cy);
+    std::vector<cv::Point2f> normPoints1 = normalizePoints(points1, intr.fx, intr.fy, intr.cx, intr.cy);
+    std::vector<cv::Point2f> normPoints2 = normalizePoints(points2, intr.fx, intr.fy, intr.cx, intr.cy);
 
 
     // CUDA
@@ -65,7 +65,7 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
     // RANSAC 主循环
     const int sampleSize = 8;
     int bestInlierCount = 0;
-    int actualIterations = maxIterations; // actualIterations 计划跑多少轮
+    int actualIterations = maxIterations; // 当前允许的最大迭代次数，可能根据内点比例动态缩短
     cv::Mat bestE;
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -104,7 +104,7 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
 
 
             // 拿回掩码
-            CUDA_CHECK(cudaMemcpy(essentialMask.data(), d_inlierMask, n * sizeof(unsigned char), cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(result.essentialMask.data(), d_inlierMask, n * sizeof(unsigned char), cudaMemcpyDeviceToHost));
 
             // 动态计算，提前终止
             float w = static_cast<float>(bestInlierCount) / static_cast<float>(n);
@@ -125,10 +125,12 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
         }
         if (iter + 1 >= actualIterations)
         {
-            actualIterations= iter + 1;
+            actualIterations = iter + 1;
             break;
         }
     }
+
+    result.iterationsUsed = actualIterations;
 
     std::cout << "[CUDA RANSAC] Inliers: "
           << bestInlierCount << " / " << points1.size() << std::endl;
@@ -136,16 +138,15 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
     if (bestInlierCount < sampleSize)
     {
         std::cerr << "[RANSAC_CUDA] Warning: Best inlier count too small (<8), essential matrix estimation is unreliable" << std::endl;
-        return bestE;
+        return result;
     }
 
     // 用全部内点重新再拟合一次E，再做一次kernel，传回最终essentialMask
     std::vector<cv::Point2f> inlierPts1, inlierPts2;
     inlierPts1.reserve(bestInlierCount);
     inlierPts2.reserve(bestInlierCount);
-    inlierPts1 = fliterInlierPoints(normPoints1, essentialMask);
-    inlierPts2 = fliterInlierPoints(normPoints2, essentialMask);
-
+    inlierPts1 = fliterInlierPoints(normPoints1, result.essentialMask);
+    inlierPts2 = fliterInlierPoints(normPoints2, result.essentialMask);
     
     bestE = refineEssentialMatrix(inlierPts1, inlierPts2);
     CUDA_CHECK(cudaMemcpy(E, flattenMatrix_3x3(bestE).data(), 9 * sizeof(double), cudaMemcpyHostToDevice));
@@ -154,9 +155,13 @@ cv::Mat estimateEssentialMatrixRANSAC(const std::vector<cv::Point2f>& points1,
     validateEssentialMatrixCUDA<<<gridSize, blockSize>>>(E, d_points1, d_points2, d_inlierMask, d_inlierCount, n, 1e-6); 
     CUDA_CHECK(cudaGetLastError()); 
     CUDA_CHECK(cudaDeviceSynchronize()); 
-    CUDA_CHECK(cudaMemcpy(essentialMask.data(), d_inlierMask, n * sizeof(unsigned char), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(result.essentialMask.data(), d_inlierMask, n * sizeof(unsigned char), cudaMemcpyDeviceToHost));
 
-    return bestE;
+    result.E = bestE;
+
+    std::cout << "[EssentialMat] Inliers: " << cv::countNonZero(result.essentialMask) << " / " << points1.size() << std::endl;
+
+    return result;
 }
 
 

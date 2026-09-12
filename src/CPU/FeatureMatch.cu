@@ -5,7 +5,7 @@
 #include "DataStruct.h"
 #include "FeatureMatch.cuh"
 
-// 统计有效匹配点
+
 int countValidFeature(const std::vector<cuda_MatchResult>& h_result)
 {
     int count = 0;
@@ -16,6 +16,7 @@ int countValidFeature(const std::vector<cuda_MatchResult>& h_result)
     }
     return count;
 }
+
 
 
 std::vector<cuda_MatchResult> cuda_FeatureMatch(const FeatureSet& f1, const FeatureSet& f2)
@@ -51,8 +52,7 @@ std::vector<cuda_MatchResult> cuda_FeatureMatch(const FeatureSet& f1, const Feat
 }
 
 
-// 将CUDA匹配结果重构成 opencv 友好型，points 保存这些点的坐标
-// 新增两个输出，保存原始点下标
+
 void convertMatches(const FeatureSet& f1, const FeatureSet& f2, const std::vector<cuda_MatchResult>& cuda_result,
                     std::vector<cv::Point2f>& points1, std::vector<cv::Point2f>& points2,
                     std::vector<int>& indices1, std::vector<int>& indices2)
@@ -70,11 +70,7 @@ void convertMatches(const FeatureSet& f1, const FeatureSet& f2, const std::vecto
         indices1.push_back(i);
         indices2.push_back(j);
 
-        /*
-        这四个vector严格对应这的，比如：
-        points1[100] = img1 的坐标，points2[100] = img2 的坐标
-        indices1[100] = img0 的特征点下标，indices2[100] = img0 的特征点下标
-        四个说的都是同一对匹配点
-        */
+        // 保存原始索引的原因是经过 bestIdx < 0 的筛选，再 push_back 进 points 后，
+        // points 里的点只剩有效点了，原始点的索引消失
     }
 }

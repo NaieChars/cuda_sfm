@@ -1,6 +1,6 @@
 #include "PnP.h"
 
-// 使用已有3D点 + 他们对于当前图像中对应的2D点，求新相机在世界坐标系下的位姿
+
 PnPResult solvePnPForNewView(
     const std::vector<cv::Point3f>& objectPoints,
     const std::vector<cv::Point2f>& imagePoints,
@@ -44,11 +44,13 @@ PnPResult solvePnPForNewView(
     cv::Rodrigues(rvec, R);
 
     // ------------- 调试代码 -------------
-    std::cout << "PnP t:\n" << tvec << "\n";
+    #if DEBUG_OUTPUT
+        std::cout << "PnP t:\n" << tvec << "\n";
+    #endif
 
-    result.R = R;
-    result.t = tvec;
-    result.inlierIndiecs = inliers;
+    result.pose.R = R;
+    result.pose.t = tvec;
+    result.inlierIndices = inliers;
     result.success = true;
 
     std::cout << "[PnPSolver] PnP solved successfully. Inliers: " 
