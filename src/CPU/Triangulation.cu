@@ -12,21 +12,30 @@ std::vector<cv::Point3f> cudaTriangulation(
     const std::vector<cv::Point2f>& inlierPoints1,
     const std::vector<cv::Point2f>& inlierPoints2,
     const CameraIntrinsics& intr,
-    const cv::Mat& R, const cv::Mat& t,
+    const CameraPose& pose1,
+    const CameraPose& pose2,
     std::vector<int>& Mask3D) 
 {
     // P1, P2
     cv::Mat P1(3, 4, CV_64F);
     P1.setTo(cv::Scalar(0));
-    P1.at<double>(0, 0) = 1.0;
-    P1.at<double>(1, 1) = 1.0;
-    P1.at<double>(2, 2) = 1.0;
-    P1 = intr.K * P1; 
+
+    pose1.R.copyTo(P1(cv::Rect(0, 0, 3, 3)));
+    pose1.t.copyTo(P1(cv::Rect(3, 0, 1, 3)));
+
+    P1 = intr.K * P1;
 
     cv::Mat P2(3, 4, CV_64F);
-    R.copyTo(P2(cv::Rect(0, 0, 3, 3)));   
-    t.copyTo(P2(cv::Rect(3, 0, 1, 3)));  
-    P2 = intr.K * P2; 
+    P2.setTo(cv::Scalar(0));
+
+    pose2.R.copyTo(P2(cv::Rect(0, 0, 3, 3)));
+    pose2.t.copyTo(P2(cv::Rect(3, 0, 1, 3)));
+
+    P2 = intr.K * P2;
+
+    // ------------ 调试输出 ------------
+    std::cout << "P1:\n" << P1 << "\n";
+    std::cout << "P2:\n" << P2 << "\n";
 
     // ---------------调试：CPU 端 Opencv 三角化对照 ----------------
     /*

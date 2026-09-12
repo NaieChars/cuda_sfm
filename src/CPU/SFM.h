@@ -9,5 +9,10 @@
 #include "Triangulation.cuh"
 #include "SFMTypes.h"
 #include "util.h"
+#include "PnP.h"
 
-SFMResult runSFM(const CameraIntrinsics& intr);
+#include <unordered_map>
+#include <algorithm>
+#include <string>
+
+SFMResult runSFM(const CameraIntrinsics& intr, int& imagesProcessed);

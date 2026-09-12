@@ -2,6 +2,8 @@
 #include <cstring>
 #include <iostream>
 
+#include "cudaSift.h"
+
 FeatureSet extractSIFTFeatures(const cv::Mat& image)
 {
 	cv::Mat gray;
@@ -29,10 +31,6 @@ FeatureSet extractSIFTFeatures(const cv::Mat& image)
 		return fs;
 	}
 
-	CV_Assert(descriptorsMat.type() == CV_32F);	
-	CV_Assert(descriptorsMat.cols == FeatureSet::DESC_DIM);
-	CV_Assert(descriptorsMat.isContinuous());
-
 	fs.kpX.resize(fs.numFeatures);
 	fs.kpY.resize(fs.numFeatures);
 	for (int i = 0; i < fs.numFeatures; i++)
@@ -46,7 +44,6 @@ FeatureSet extractSIFTFeatures(const cv::Mat& image)
 	std::memcpy(fs.descriptors.data(), descriptorsMat.ptr<float>(0), fs.descriptors.size() * sizeof(float));
 
 	fs.cvKeypoints = std::move(keypoints);
-	std::cout << "[FeatureExtractor] Extracted " << fs.numFeatures << " feature points." << std::endl;
 
 	return fs;
 }
@@ -93,6 +90,7 @@ std::vector<FeatureSet> extractFeaturesFromImages(std::vector<cv::Mat>& images)
 	for (int i = 0; i < n; i++)
 	{
 		FeatureSet feature = extractSIFTFeatures(images[i]);
+		std::cout << "[FeatureExtractor] img" << i <<  " Extracted " << feature.numFeatures << " feature points." << std::endl;
 		results.push_back(feature);	
 	}
 

@@ -309,8 +309,8 @@ std::vector<cv::Point3f> cudaTriangulation(
     const std::vector<cv::Point2f>& inlierPoints1,
     const std::vector<cv::Point2f>& inlierPoints2,
     const CameraIntrinsics& intr,
-    const cv::Mat& R,
-    const cv::Mat& t,
+    const CameraPose& pose1,
+    const CameraPose& pose2,
     std::vector<int> Mask3D
 );
 ```
@@ -322,7 +322,7 @@ P1 = K [I | 0]
 P2 = K [R | t]
 ```
 
-传入两次筛选后的内点，相机的R、t、`CameraIntrinsics`，内部构造两个函数的投影矩阵，将其拍平，连同内点传入进 Device 端进行三角化，Device 端输出 `d_Mask`（即判断该3D点是否有效）到 Host 端。输出 `Mask_3D` 与经过该掩码筛选出的最终内点集
+传入两次筛选后的内点，两次相机的位姿、`CameraIntrinsics`，内部构造两个函数的投影矩阵，将其拍平，连同内点传入进 Device 端进行三角化，Device 端输出 `d_Mask`（即判断该3D点是否有效）到 Host 端。输出 `Mask_3D` 与经过该掩码筛选出的最终内点集
 
 ### CUDA 核函数
 
@@ -372,6 +372,79 @@ struct CameraIntrinsics
 当前代码没有实现畸变模型。
 
 ---
+
+## 12. 增量式 SFM 全流程数据流通
+
+**主要有这四种数据编号**
+|`kpPrev`/`kpCur`| `int` | 某张图中的 SIFT 特征编号 |
+| `newMatches[k]`| `NewMatch`| 一对匹配的两个点 SIFT 编号|
+|`newPointsPrev[k]`|`cv::Point2f`|这对匹配中，上一张图的像素坐标|
+|`Point3D[k]`|`cv::Point3f`|这对匹配三角化出来的三维坐标|
+
+1. 原始数据：  
+`std::vector<cv::Mat> iamges`  
+
+1. SIFT 
+经 SIFT，每一个图片都会获得一个 `featureSet` 数据结构，我们将其打包成 `std::vector<feautreSet> feature`，例如 `feature[0]` 包含第一张图片经 SIFT 获得的数据。一个 `featureSet` 包含当前图像获得的特征点数量，按顺序排列的坐标数组，按顺序排列的描述子数组。例如：
+
+```
+features[0]:
+
+feature 0 -> (123, 456) + 126维的descriptor
+feature 1 -> ...
+```
+
+**featureIndex**：例如 `feature 233` 表示这个图片中233哥SIFT特征点，用于 track 编号
+
+3. 特征匹配
+将两张图进行 cuda 匹配：`cuda_FeatureMatch(features[prevIdx], features[i]);`，得到 `std::vector<cuda_MatchResult> matchesPrev;`
+
+```
+struct cuda_MatchResult
+{
+    int bestIdx;
+    float bestDist;
+};
+```
+
+`matchesPrev[kpPrev]` 表示：`prevIdx` 图片的第 `kpPrev` 个特征，匹配到了当前图片的第 `bestIdx` 个特征。
+
+4. 数据转换
+`convertMatches()` 把 CUDA 匹配结果转换成SFM使用的数据，输出四个一一对应的数组：
+
+```
+points1[k]
+points2[k]
+indices1[k]
+indices2[k]
+```
+
+例如：
+
+```
+k = 100
+
+points1[100]   = (1234, 567)
+points2[100]   = (1301, 580)
+
+indices1[100]  = 532
+indices2[100]  = 817
+```
+表示前一张图的 feature 532 匹配当前图的 feature 817，对应像素 (1234,567) ↔ (1301,580)
+
+5. 本质矩阵估计
+上面四个数组经 `essentialMask` 筛选得到第一轮内点
+
+6. 位姿恢复
+上面四个数组经 `poseMask` 筛选得到第二轮内点  
+同时该过程还会将得到的R，t进行保存，用于下面的三角化
+
+7. 三角化
+将经过两次筛选的 `points1` 和 `points2` 输入三角化函数，得到 `Points3D`、`Mask3D`
+
+8. 加入 `pointCloud`
+对于有效的 `Points3D[k]`，会加入 `pointCloud`，例如
+
 
 ## 12. CUDA 数据结构
 

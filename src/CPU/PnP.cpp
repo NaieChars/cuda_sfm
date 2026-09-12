@@ -28,7 +28,7 @@ PnPResult solvePnPForNewView(
         distCoeffs,
         rvec,
         tvec,
-        true,
+        false,
         iterationsCount,
         reprojectionError,
         confidence,
@@ -42,6 +42,9 @@ PnPResult solvePnPForNewView(
     // rvec -> R
     cv::Mat R;
     cv::Rodrigues(rvec, R);
+
+    // ------------- 调试代码 -------------
+    std::cout << "PnP t:\n" << tvec << "\n";
 
     result.R = R;
     result.t = tvec;

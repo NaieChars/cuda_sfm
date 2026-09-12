@@ -2,21 +2,21 @@
 
 CameraIntrinsics createCameraIntrinsics(float fx, float fy, float cx, float cy)
 {
-    CameraIntrinsics camera;
-    camera.fx = fx;
-    camera.fy = fy;
-    camera.cx = cx;
-    camera.cy = cy;
+    CameraIntrinsics intr;
+    intr.fx = fx;
+    intr.fy = fy;
+    intr.cx = cx;
+    intr.cy = cy;
 
-    camera.K = (cv::Mat_<double>(3, 3) <<
-        static_cast<double>(camera.fx), 0.0, static_cast<double>(camera.cx),
-        0.0, static_cast<double>(camera.fy), static_cast<double>(camera.cy),
+    intr.K = (cv::Mat_<double>(3, 3) <<
+        static_cast<double>(intr.fx), 0.0, static_cast<double>(intr.cx),
+        0.0, static_cast<double>(intr.fy), static_cast<double>(intr.cy),
         0.0, 0.0, 1.0
     );
 
-    camera.Kinv = camera.K.inv();
+    intr.Kinv = intr.K.inv();
 
-    return camera;
+    return intr;
 }
 
 cv::Vec2f pixelToNormalized(const CameraIntrinsics& intr, float px, float py)
