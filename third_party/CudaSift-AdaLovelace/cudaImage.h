@@ -1,6 +1,7 @@
 //********************************************************//
 // CUDA SIFT extractor by Marten Bjorkman aka Celebrandil //
 //********************************************************//  
+#include <cstddef>
 
 #ifndef CUDAIMAGE_H
 #define CUDAIMAGE_H

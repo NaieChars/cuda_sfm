@@ -2,8 +2,10 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <Eigen/Dense>
+#include <cuda_runtime.h>
 
 #include "PointCloudExport.h"
+#include "../GPU/d_BA.cuh"
 
 
 
@@ -140,4 +142,47 @@ struct PnPResult
     CameraPose pose;                 ///< PnP 估计得到的相机位姿
     std::vector<int> inlierIndices;  ///< PnP 判断为内点的输入点下标
     bool success = false;            ///< PnP 是否成功
+};
+
+
+struct ObsJacobian
+{
+    cv::Vec2f residual;         // 投影误差
+    cv::Matx<double, 2, 3> Jp;  // 对 3D 点求导
+    cv::Matx<double, 2, 6> Jc;  // 对相机参数求导
+};
+
+
+
+struct BAGPUData
+{
+    // 原始数据
+    d_Observation* d_observations = nullptr;
+    d_CameraPose* d_cameras = nullptr;
+    cv::Point3f* d_points = nullptr;
+    static_assert(sizeof(cv::Point3f) == 12, "layout mismatch with float3");
+
+    // Observation 索引
+    int* d_pointObsStart = nullptr;
+    int* d_pointObsCount = nullptr;
+    int* d_pointObsIndices = nullptr;
+
+    int* d_cameraObsStart = nullptr;
+    int* d_cameraObsCount = nullptr;
+    int* d_cameraObsIndices = nullptr;
+
+    // Jacobian
+    cv::Point2f* d_residuals = nullptr;
+    float* d_Jp = nullptr;
+    float* d_Jc = nullptr;
+
+    // Point blocks
+    float* d_Hpp = nullptr;
+    float* d_gp = nullptr;
+    float* d_HppInv = nullptr;
+
+    // Camera blocks
+    float* d_Hcc = nullptr;
+    float* d_gc = nullptr;
+    float* d_M = nullptr;
 };

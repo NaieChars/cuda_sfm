@@ -29,17 +29,20 @@ set(SOURCES
     src/CPU/SFM.cpp
     src/CPU/util.cpp
     src/CPU/PnP.cpp
+    src/CPU/BundleAdjustment.cpp
 
     # Host 侧 CUDA 封装
     src/CPU/FeatureMatch.cu
     src/CPU/Triangulation.cu
     src/CPU/EssentialMatrix.cu
+    src/CPU/runBA.cu
 
     # GPU kernel / device code
     src/GPU/d_FeatureMatch.cu
     src/GPU/findEssentialMat.cu
     src/GPU/TriangulationCUDA.cu
     src/GPU/GPU_util.cu
+    src/GPU/d_BA.cu
 
     # CudaSift
     third_party/CudaSift-AdaLovelace/cudaImage.cu
@@ -54,6 +57,7 @@ target_include_directories(cuda_sfm PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+    # "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/include"
 
     ${CMAKE_SOURCE_DIR}/third_party/CudaSift-AdaLovelace
 )
